@@ -9,7 +9,7 @@ pipeline {
     environment {
         REPO_URL = 'https://github.com/bakajrmb-prog/my-python'
         BRANCH   = 'dev'
-        DOCKER_IMAGE_NAME = 'my-python-app'
+        DOCKER_IMAGE_NAME = 'bakajrmb/my-python-app:latest'
     }
 
     stages {
@@ -54,9 +54,19 @@ pipeline {
 
         stage('Build Docker Image') {
             steps {
-                sh '''
-                docker build -t ${DOCKER_IMAGE_NAME} .
-                '''
+                script {
+                    dockerImage = docker.build(DOCKER_IMAGE_NAME)
+                }
+            }
+        }
+
+        stage('Push Docker Image') {
+            steps {
+                script {
+                    docker.withRegistry('https://index.docker.io/v1/', 'dockerhub_bakajrmb') {
+                        dockerImage.push()
+                    }
+                }
             }
         }
 
@@ -70,3 +80,4 @@ pipeline {
         }
     }
 }
+
