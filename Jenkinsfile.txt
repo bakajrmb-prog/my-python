@@ -1,0 +1,72 @@
+pipeline {
+    agent {
+        docker {
+            image 'python:3.11'
+            args '-u root:root'
+        }
+    }
+
+    environment {
+        REPO_URL = 'https://github.com/bakajrmb-prog/my-python'
+        BRANCH   = 'dev'
+        DOCKER_IMAGE_NAME = 'my-python-app'
+    }
+
+    stages {
+
+        stage('Hello') {
+            steps {
+                echo 'Début de construction de my-python'
+            }
+        }
+
+        stage('Checkout Git') {
+            steps {
+                git url: "${REPO_URL}", branch: "${BRANCH}"
+            }
+        }
+
+        stage('Setup Python') {
+            steps {
+                sh '''
+                python3 -m venv venv
+                . venv/bin/activate
+                pip install --upgrade pip
+                pip install pytest
+                '''
+            }
+        }
+
+        stage('Tests unitaires Python') {
+            steps {
+                sh '''
+                . venv/bin/activate
+                mkdir -p test-reports
+                pytest test_calculs.py --junit-xml=test-reports/results.xml
+                '''
+            }
+            post {
+                always {
+                    junit 'test-reports/results.xml'
+                }
+            }
+        }
+
+        stage('Build Docker Image') {
+            steps {
+                sh '''
+                docker build -t ${DOCKER_IMAGE_NAME} .
+                '''
+            }
+        }
+
+        stage('Run Docker Container') {
+            steps {
+                sh '''
+                docker run --rm ${DOCKER_IMAGE_NAME}
+                docker image ls | grep ${DOCKER_IMAGE_NAME}
+                '''
+            }
+        }
+    }
+}
